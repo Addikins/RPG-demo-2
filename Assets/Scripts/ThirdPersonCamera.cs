@@ -5,15 +5,20 @@ using UnityEngine;
 public class ThirdPersonCamera : MonoBehaviour
 {
     [SerializeField] float rotationSpeed = 3f;
-    [SerializeField] Transform Target, Player;
+    [SerializeField] Transform target;
     [SerializeField] float distanceFromTarget = 2f;
+    [SerializeField] Vector2 verticalMinMax = new Vector2(-35, 85);
+    [SerializeField] float rotationSmoothTime = .12f;
+
+    Vector3 rotationSmoothVelocity;
+    Vector3 currentRotation;
 
     float mouseX, mouseY;
 
     void Start()
     {
-    //     Cursor.visible = false;
-    //     Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
+        Cursor.lockState = CursorLockMode.Locked;
     }
 
     private void LateUpdate()
@@ -25,16 +30,13 @@ public class ThirdPersonCamera : MonoBehaviour
     {
         mouseX += Input.GetAxis("Mouse X") * rotationSpeed;
         mouseY -= Input.GetAxis("Mouse Y") * rotationSpeed;
+        mouseY = Mathf.Clamp(mouseY, verticalMinMax.x, verticalMinMax.y);
 
-        Vector3 targetRotation = new Vector3(mouseY, mouseX);
-        transform.eulerAngles = targetRotation;
+        currentRotation = Vector3.SmoothDamp(currentRotation, new Vector3(mouseY, mouseX), ref rotationSmoothVelocity, rotationSmoothTime);
 
 
-        // transform.LookAt(Target);
+        transform.eulerAngles = currentRotation;
 
-        // Target.rotation = Quaternion.Euler(mouseY, mouseX, 0);
-        // Player.rotation = Quaternion.Euler(0, mouseX, 0);
+        transform.position = target.position - transform.forward * distanceFromTarget;
     }
-
-
 }

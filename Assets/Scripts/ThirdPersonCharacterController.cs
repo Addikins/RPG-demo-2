@@ -6,6 +6,8 @@ public class ThirdPersonCharacterController : MonoBehaviour
 {
     [SerializeField] float speed = 1f;
 
+    
+
     private void Update()
     {
         PlayerMovement();
