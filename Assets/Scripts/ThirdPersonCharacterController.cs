@@ -1,28 +1,38 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using UnityEngine;
 
 public class ThirdPersonCharacterController : MonoBehaviour {
 
-    public float walkSpeed = 2;
-    public float runSpeed = 6;
+    [SerializeField] float walkSpeed = 2;
+    [SerializeField] float runSpeed = 6;
+    [SerializeField] float speedSmoothTime = 0.1f;
+    [SerializeField] float turnSmoothTime = 0.2f;
+    [SerializeField] float walkingAnimationSpeed = .5f;
+    [SerializeField] float runningAnimationSpeed = 1f;
+    [SerializeField] float maxAnimationSpeed = 1.5f;
+    [SerializeField] bool hasSpeedBonus;
 
-    public float turnSmoothTime = 0.2f;
+    private float currentRunSpeed;
+    private float maxSpeed;
+    private float defaultRunAnimation;
     float turnSmoothVelocity;
-
-    public float speedSmoothTime = 0.1f;
     float speedSmoothVelocity;
     float currentSpeed;
-
-    // Animator animator;
+    Animator animator;
     Transform cameraT;
 
     void Start () {
-        // animator = GetComponent<Animator> ();
+        animator = GetComponent<Animator> ();
         cameraT = Camera.main.transform;
+        defaultRunAnimation = runningAnimationSpeed;
+        maxSpeed = runSpeed * 1.5f;
     }
 
     void Update () {
+        if (Input.GetButtonDown ("Jump")) { hasSpeedBonus = !hasSpeedBonus; }
 
+        CheckBonusSpeed ();
         Vector2 input = new Vector2 (Input.GetAxisRaw ("Horizontal"), Input.GetAxisRaw ("Vertical"));
         Vector2 inputDir = input.normalized;
 
@@ -32,13 +42,23 @@ public class ThirdPersonCharacterController : MonoBehaviour {
         }
 
         bool running = Input.GetKey (KeyCode.LeftShift);
-        float targetSpeed = ((running) ? runSpeed : walkSpeed) * inputDir.magnitude;
+        float targetSpeed = ((running) ? currentRunSpeed : walkSpeed) * inputDir.magnitude;
         currentSpeed = Mathf.SmoothDamp (currentSpeed, targetSpeed, ref speedSmoothVelocity, speedSmoothTime);
 
         transform.Translate (transform.forward * currentSpeed * Time.deltaTime, Space.World);
 
-        // float animationSpeedPercent = ((running) ? 1 : .5f) * inputDir.magnitude;
-        // animator.SetFloat ("speedPercent", animationSpeedPercent, speedSmoothTime, Time.deltaTime);
+        float animationSpeed = ((running) ? runningAnimationSpeed : walkingAnimationSpeed) * inputDir.magnitude;
+        animator.SetFloat ("forwardSpeed", animationSpeed, speedSmoothTime, Time.deltaTime);
 
+    }
+
+    private void CheckBonusSpeed () {
+        if (hasSpeedBonus) {
+            currentRunSpeed = maxSpeed;
+            runningAnimationSpeed = maxAnimationSpeed;
+            return;
+        }
+        currentRunSpeed = runSpeed;
+        runningAnimationSpeed = defaultRunAnimation;
     }
 }
