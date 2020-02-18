@@ -7,35 +7,44 @@ public class ThirdPersonCharacterController : MonoBehaviour {
     [SerializeField] float walkSpeed = 2f;
     [SerializeField] float runSpeed = 6f;
     [SerializeField] float rollSpeed = 2f;
+    [SerializeField] float rollTime = 2.4f;
+    [SerializeField] float rollDelay = .5f;
+    [SerializeField] float maxRollTime = 1.5f;
     [SerializeField] float speedSmoothTime = 0.1f;
     [SerializeField] float turnSmoothTime = 0.2f;
     [SerializeField] float walkingAnimationSpeed = .5f;
     [SerializeField] float runningAnimationSpeed = 1f;
+    [SerializeField] float rollingAnimationSpeed = 1f;
     [SerializeField] float maxAnimationSpeed = 1.5f;
+    [SerializeField] float bonusSpeedMultiplier = 1.5f;
     [SerializeField] bool hasSpeedBonus = true;
-
     private State state;
+    private float timeSpentRolling;
+
     private enum State {
         Normal,
         Rolling,
     }
 
     private float currentRunSpeed;
+    private float currentRollSpeed;
     private float maxSpeed;
     private float defaultRunAnimation;
+
     float turnSmoothVelocity;
     float speedSmoothVelocity;
     float currentSpeed;
-    Animator animator;
     Transform cameraT;
+    Animator animator;
 
     void Start () {
         state = State.Normal;
-
         animator = GetComponent<Animator> ();
+
         cameraT = Camera.main.transform;
         defaultRunAnimation = runningAnimationSpeed;
-        maxSpeed = runSpeed * 1.5f;
+        maxSpeed = runSpeed * bonusSpeedMultiplier;
+        animator.SetFloat ("rollSpeed", rollingAnimationSpeed);
     }
 
     void Update () {
@@ -52,6 +61,7 @@ public class ThirdPersonCharacterController : MonoBehaviour {
 
     private void Movement () {
         CheckBonusSpeed ();
+        bool running = Input.GetKey (KeyCode.LeftShift);
         Vector2 input = new Vector2 (Input.GetAxisRaw ("Horizontal"), Input.GetAxisRaw ("Vertical"));
         Vector2 inputDir = input.normalized;
 
@@ -59,7 +69,6 @@ public class ThirdPersonCharacterController : MonoBehaviour {
             float targetRotation = Mathf.Atan2 (inputDir.x, inputDir.y) * Mathf.Rad2Deg + cameraT.eulerAngles.y;
             transform.eulerAngles = Vector3.up * Mathf.SmoothDampAngle (transform.eulerAngles.y, targetRotation, ref turnSmoothVelocity, turnSmoothTime);
         }
-        bool running = Input.GetKey (KeyCode.LeftShift);
         float targetSpeed = ((running) ? currentRunSpeed : walkSpeed) * inputDir.magnitude;
         currentSpeed = Mathf.SmoothDamp (currentSpeed, targetSpeed, ref speedSmoothVelocity, speedSmoothTime);
 
@@ -71,17 +80,29 @@ public class ThirdPersonCharacterController : MonoBehaviour {
 
     private void Roll () {
         if (Input.GetButtonDown ("Jump")) {
+            currentRollSpeed = rollSpeed;
             animator.SetTrigger ("roll");
             state = State.Rolling;
+            timeSpentRolling = 0f;
+
+            // animator.SetFloat ("rollSpeed", rollSpeed);
         }
     }
 
     private void Rolling () {
-        transform.Translate (transform.forward * rollSpeed * Time.deltaTime, Space.World);
+        float delay;
+        if (animator.GetFloat ("forwardSpeed") > 1) { delay = 0; } else { delay = rollDelay; }
 
-        rollSpeed -= rollSpeed * 5f * Time.deltaTime;
+        timeSpentRolling += Time.deltaTime;
+        if (timeSpentRolling > delay && timeSpentRolling < maxRollTime) {
+            transform.Translate ((transform.forward * Time.deltaTime * currentRunSpeed), Space.World);
+        }
 
-        if (rollSpeed < .01f) {
+        if (timeSpentRolling >= maxRollTime) {
+            animator.SetFloat ("forwardSpeed", .5f);
+        }
+
+        if (timeSpentRolling >= rollTime) {
             state = State.Normal;
             Debug.Log (state.ToString ());
         }
