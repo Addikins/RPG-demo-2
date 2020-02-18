@@ -86,7 +86,7 @@ CapsuleCollider:
   m_Material: {fileID: 0}
   m_IsTrigger: 0
   m_Enabled: 1
-  m_Radius: 0.5
+  m_Radius: 0.25
   m_Height: 2
   m_Direction: 1
   m_Center: {x: 0, y: 1, z: 0}
@@ -102,9 +102,9 @@ Rigidbody:
   m_Drag: 0
   m_AngularDrag: 0.05
   m_UseGravity: 1
-  m_IsKinematic: 1
+  m_IsKinematic: 0
   m_Interpolate: 0
-  m_Constraints: 32
+  m_Constraints: 112
   m_CollisionDetection: 0
 --- !u!114 &3378133027093414581
 MonoBehaviour:
@@ -127,9 +127,10 @@ MonoBehaviour:
   speedSmoothTime: 0.15
   turnSmoothTime: 0.2
   walkingAnimationSpeed: 0.5
-  runningAnimationSpeed: 1
+  runningAnimationSpeed: 1.1
   rollingAnimationSpeed: 1
   maxAnimationSpeed: 2
+  bonusSpeedMultiplier: 1.5
   hasSpeedBonus: 1
 --- !u!95 &1593973121
 Animator:

@@ -24,6 +24,7 @@ public class ThirdPersonCharacterController : MonoBehaviour {
     private enum State {
         Normal,
         Rolling,
+        Falling,
     }
 
     private float currentRunSpeed;
@@ -52,9 +53,13 @@ public class ThirdPersonCharacterController : MonoBehaviour {
             case State.Normal:
                 Movement ();
                 Roll ();
+                CheckGround ();
                 break;
             case State.Rolling:
                 Rolling ();
+                break;
+            case State.Falling:
+                Falling ();
                 break;
         }
     }
