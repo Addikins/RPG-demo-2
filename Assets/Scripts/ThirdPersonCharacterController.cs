@@ -6,13 +6,14 @@ namespace RPG.Control {
 
     public class ThirdPersonCharacterController : MonoBehaviour {
 
+        [SerializeField] float gravity = -10f;
         [SerializeField] float walkSpeed = 2f;
         [SerializeField] float runSpeed = 6f;
-        [SerializeField] float rollSpeed = 2f;
-        [SerializeField] float rollTime = 2.4f;
-        [SerializeField] float rollDelay = .5f;
-        [SerializeField] float maxRollTime = 1.5f;
-        [SerializeField] float speedSmoothTime = 0.1f;
+        [SerializeField] float rollSpeed = 5f;
+        [SerializeField] float maxRollTime = 1f;
+        [SerializeField] float rollDelay = .25f;
+        [SerializeField] float fallDelay = .3f;
+        [SerializeField] float speedSmoothTime = 0.15f;
         [SerializeField] float turnSmoothTime = 0.2f;
         [SerializeField] float walkingAnimationSpeed = .5f;
         [SerializeField] float runningAnimationSpeed = 1f;
@@ -30,15 +31,16 @@ namespace RPG.Control {
         }
 
         private float currentRunSpeed;
-        private float currentRollSpeed;
         private float maxSpeed;
         private float defaultRunAnimation;
         private float distanceToGround;
+        private Vector3 velocity;
+        private float velocityY;
+        private float timeOffGround;
 
         float turnSmoothVelocity;
         float speedSmoothVelocity;
         float currentSpeed;
-        bool isGrounded;
         Transform cameraT;
         Animator animator;
         CharacterController controller;
@@ -49,10 +51,12 @@ namespace RPG.Control {
 
             cameraT = Camera.main.transform;
             defaultRunAnimation = runningAnimationSpeed;
-            maxSpeed = runSpeed * bonusSpeedMultiplier;
+            currentSpeed = walkSpeed;
             animator.SetFloat ("rollSpeed", rollingAnimationSpeed);
+            maxSpeed = runSpeed * 1.5f;
 
-            distanceToGround = GetComponent<SphereCollider> ().bounds.extents.y;
+            // distanceToGround = GetComponent<SphereCollider> ().bounds.extents.y;
+            controller = GetComponent<CharacterController> ();
         }
 
         void Update () {
@@ -70,7 +74,6 @@ namespace RPG.Control {
                     CheckGround ();
                     break;
             }
-            controller = GetComponent<CharacterController> ();
         }
 
         private void Movement () {
@@ -86,58 +89,68 @@ namespace RPG.Control {
             float targetSpeed = ((running) ? currentRunSpeed : walkSpeed) * inputDir.magnitude;
             currentSpeed = Mathf.SmoothDamp (currentSpeed, targetSpeed, ref speedSmoothVelocity, speedSmoothTime);
 
-            transform.Translate (transform.forward * currentSpeed * Time.deltaTime, Space.World);
+            HandleMovement ();
+
+            if (controller.isGrounded) {
+                velocityY = 0;
+            }
 
             float animationSpeed = ((running) ? runningAnimationSpeed : walkingAnimationSpeed) * inputDir.magnitude;
             animator.SetFloat ("forwardSpeed", animationSpeed, speedSmoothTime, Time.deltaTime);
         }
 
+        private void HandleMovement () {
+            velocityY += gravity * Time.deltaTime;
+            velocity = transform.forward * currentSpeed + Vector3.up * velocityY;
+            controller.Move (velocity * Time.deltaTime);
+        }
+
         private void Roll () {
             if (Input.GetButtonDown ("Jump")) {
-                currentRollSpeed = rollSpeed;
+                currentSpeed = Mathf.Max (rollSpeed, currentSpeed);
                 animator.SetTrigger ("roll");
                 state = State.Rolling;
                 timeSpentRolling = 0f;
-
-                // animator.SetFloat ("rollSpeed", rollSpeed);
             }
         }
 
         private void Rolling () {
             float delay;
+            //Differenciates between run-to-roll vs stand-to-roll
             if (animator.GetFloat ("forwardSpeed") > 1) { delay = 0; } else { delay = rollDelay; }
 
             timeSpentRolling += Time.deltaTime;
             if (timeSpentRolling > delay && timeSpentRolling < maxRollTime) {
-                transform.Translate ((transform.forward * Time.deltaTime * currentRunSpeed), Space.World);
+                HandleMovement ();
             }
 
             if (timeSpentRolling >= maxRollTime) {
-                animator.SetFloat ("forwardSpeed", .5f);
-            }
-
-            if (timeSpentRolling >= rollTime) {
                 state = State.Normal;
-                Debug.Log (state.ToString ());
             }
         }
 
         private void Falling () {
-            transform.Translate (transform.forward * currentSpeed * Time.deltaTime, Space.World);
+            HandleMovement ();
+            // controller.Move (velocity * Time.deltaTime);
+            // transform.Translate (transform.forward * currentSpeed * Time.deltaTime, Space.World);
         }
 
         private void CheckGround () {
-            isGrounded = Physics.Raycast (transform.position + (Vector3.up * .2f) + (Vector3.forward * .1f), Vector3.down, distanceToGround + 0.5f) ||
-                Physics.Raycast (transform.position + (Vector3.up * .2f) + (Vector3.forward * -.1f), Vector3.down, distanceToGround + 0.5f) ||
-                Physics.Raycast (transform.position + (Vector3.up * .2f), Vector3.down, distanceToGround + 0.5f);
-
-            animator.SetBool ("isGrounded", isGrounded);
-            print (isGrounded);
-            if (isGrounded) {
+            // isGrounded = Physics.Raycast (transform.position + (Vector3.up * .2f) + (Vector3.forward * .1f), Vector3.down, distanceToGround + 0.5f) ||
+            //     Physics.Raycast (transform.position + (Vector3.up * .2f) + (Vector3.forward * -.1f), Vector3.down, distanceToGround + 0.5f) ||
+            //     Physics.Raycast (transform.position + (Vector3.up * .2f), Vector3.down, distanceToGround + 0.5f);
+            if (controller.isGrounded) {
+                animator.SetBool ("isGrounded", controller.isGrounded);
                 state = State.Normal;
+                timeOffGround = 0;
                 return;
             }
-            state = State.Falling;
+            timeOffGround += Time.deltaTime;
+            
+            if (timeOffGround > fallDelay) {
+                animator.SetBool ("isGrounded", controller.isGrounded);
+                state = State.Falling;
+            }
         }
 
         private void CheckBonusSpeed () {
