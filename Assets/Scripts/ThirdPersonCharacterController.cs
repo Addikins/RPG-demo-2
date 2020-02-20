@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections;
-using UnityEngine;
+﻿using UnityEngine;
 
 namespace RPG.Control {
 
@@ -21,13 +19,17 @@ namespace RPG.Control {
         [SerializeField] float maxAnimationSpeed = 1.5f;
         [SerializeField] float bonusSpeedMultiplier = 1.5f;
         [SerializeField] bool hasSpeedBonus = true;
+        [SerializeField] float attackCooldown = .5f;
+        [SerializeField] float attackTime = .5f;
         private State state;
         private float timeSpentRolling;
+        private float timeSinceLastIdleAnimation;
 
         private enum State {
             Normal,
             Rolling,
             Falling,
+            Attacking,
         }
 
         private float currentRunSpeed;
@@ -37,6 +39,9 @@ namespace RPG.Control {
         private Vector3 velocity;
         private float velocityY;
         private float timeOffGround;
+        private float timeAttacking;
+        private float timeSinceLastAttack;
+        private Random random;
 
         float turnSmoothVelocity;
         float speedSmoothVelocity;
@@ -44,6 +49,7 @@ namespace RPG.Control {
         Transform cameraT;
         Animator animator;
         CharacterController controller;
+        private float randomIdleInterval;
 
         void Start () {
             state = State.Normal;
@@ -57,6 +63,8 @@ namespace RPG.Control {
 
             // distanceToGround = GetComponent<SphereCollider> ().bounds.extents.y;
             controller = GetComponent<CharacterController> ();
+            randomIdleInterval = Random.Range (0, 50f);
+
         }
 
         void Update () {
@@ -65,6 +73,7 @@ namespace RPG.Control {
                     Movement ();
                     Roll ();
                     CheckGround ();
+                    CheckAttack ();
                     break;
                 case State.Rolling:
                     Rolling ();
@@ -73,11 +82,21 @@ namespace RPG.Control {
                     Falling ();
                     CheckGround ();
                     break;
+                case State.Attacking:
+                    Attacking ();
+                    break;
             }
         }
 
         private void Movement () {
+            if (Input.GetMouseButtonDown (2)) {
+                hasSpeedBonus = !hasSpeedBonus;
+            }
+
             CheckBonusSpeed ();
+
+            ToggleIdleAnimation ();
+
             bool running = Input.GetKey (KeyCode.LeftShift);
             Vector2 input = new Vector2 (Input.GetAxisRaw ("Horizontal"), Input.GetAxisRaw ("Vertical"));
             Vector2 inputDir = input.normalized;
@@ -146,7 +165,7 @@ namespace RPG.Control {
                 return;
             }
             timeOffGround += Time.deltaTime;
-            
+
             if (timeOffGround > fallDelay) {
                 animator.SetBool ("isGrounded", controller.isGrounded);
                 state = State.Falling;
@@ -161,6 +180,38 @@ namespace RPG.Control {
             }
             currentRunSpeed = runSpeed;
             runningAnimationSpeed = defaultRunAnimation;
+        }
+
+        private void CheckAttack () {
+            timeSinceLastAttack += Time.deltaTime;
+            if (Input.GetMouseButtonDown (0) && timeSinceLastAttack > attackCooldown) {
+                animator.SetTrigger ("attack");
+                animator.SetFloat ("attackMotion", Random.Range (0, 4));
+                print ("Attacking");
+                state = State.Attacking;
+                timeSinceLastAttack = 0f;
+                return;
+            }
+
+        }
+
+        private void Attacking () {
+            if (timeAttacking > attackTime) {
+                timeAttacking = 0;
+                state = State.Normal;
+                print ("Stopping Attack");
+            }
+            timeAttacking += Time.deltaTime;
+        }
+
+        private void ToggleIdleAnimation () {
+            timeSinceLastIdleAnimation += Time.deltaTime;
+
+            if (timeSinceLastIdleAnimation >= randomIdleInterval) {
+                animator.SetFloat ("idleMotion", Random.Range (0, 2));
+                randomIdleInterval = Random.Range (0, 50f);
+                timeSinceLastIdleAnimation = 0;
+            }
         }
     }
 }
