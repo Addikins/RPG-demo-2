@@ -21,6 +21,7 @@ namespace RPG.Control {
         [SerializeField] bool hasSpeedBonus = true;
         [SerializeField] float attackCooldown = .5f;
         [SerializeField] float attackTime = .5f;
+        [SerializeField] int idleAnimations = 47;
         private State state;
         private float timeSpentRolling;
         private float timeSinceLastIdleAnimation;
@@ -63,7 +64,7 @@ namespace RPG.Control {
 
             // distanceToGround = GetComponent<SphereCollider> ().bounds.extents.y;
             controller = GetComponent<CharacterController> ();
-            randomIdleInterval = Random.Range (0, 50f);
+            randomIdleInterval = Random.Range (5, 26f);
 
         }
 
@@ -208,8 +209,9 @@ namespace RPG.Control {
             timeSinceLastIdleAnimation += Time.deltaTime;
 
             if (timeSinceLastIdleAnimation >= randomIdleInterval) {
-                animator.SetFloat ("idleMotion", Random.Range (0, 2));
-                randomIdleInterval = Random.Range (0, 50f);
+                animator.SetFloat ("idleMotion", Random.Range (0, idleAnimations));
+                animator.SetTrigger ("idle");
+                randomIdleInterval = Random.Range (5, 26f);
                 timeSinceLastIdleAnimation = 0;
             }
         }
