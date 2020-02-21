@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 
 namespace RPG.Control {
 
@@ -8,9 +9,10 @@ namespace RPG.Control {
         [SerializeField] float walkSpeed = 2f;
         [SerializeField] float runSpeed = 6f;
         [SerializeField] float rollSpeed = 5f;
+        [SerializeField] float jumpHeight = 2f;
         [SerializeField] float maxRollTime = 1f;
         [SerializeField] float rollDelay = .25f;
-        [SerializeField] float fallDelay = .3f;
+        [SerializeField] float fallDelay = .2f;
         [SerializeField] float speedSmoothTime = 0.15f;
         [SerializeField] float turnSmoothTime = 0.2f;
         [SerializeField] float walkingAnimationSpeed = .5f;
@@ -21,7 +23,7 @@ namespace RPG.Control {
         [SerializeField] bool hasSpeedBonus = true;
         [SerializeField] float attackCooldown = .5f;
         [SerializeField] float attackTime = .5f;
-        [SerializeField] int idleAnimations = 47;
+        [SerializeField] int idleAnimationsCount = 47;
         private State state;
         private float timeSpentRolling;
         private float timeSinceLastIdleAnimation;
@@ -42,7 +44,7 @@ namespace RPG.Control {
         private float timeOffGround;
         private float timeAttacking;
         private float timeSinceLastAttack;
-        private Random random;
+        private UnityEngine.Random random;
 
         float turnSmoothVelocity;
         float speedSmoothVelocity;
@@ -51,6 +53,7 @@ namespace RPG.Control {
         Animator animator;
         CharacterController controller;
         private float randomIdleInterval;
+        private float timeSinceLastInput;
 
         void Start () {
             state = State.Normal;
@@ -59,21 +62,23 @@ namespace RPG.Control {
             cameraT = Camera.main.transform;
             defaultRunAnimation = runningAnimationSpeed;
             currentSpeed = walkSpeed;
-            animator.SetFloat ("rollSpeed", rollingAnimationSpeed);
             maxSpeed = runSpeed * 1.5f;
 
             // distanceToGround = GetComponent<SphereCollider> ().bounds.extents.y;
             controller = GetComponent<CharacterController> ();
-            randomIdleInterval = Random.Range (5, 26f);
+            randomIdleInterval = UnityEngine.Random.Range (5, 26f);
 
         }
 
         void Update () {
             switch (state) {
                 case State.Normal:
-                    Movement ();
-                    Roll ();
+                    if (!Input.anyKeyDown) { timeSinceLastInput += Time.deltaTime; } else { timeSinceLastInput = 0; }
+
                     CheckGround ();
+                    Movement ();
+                    Jump ();
+                    Roll ();
                     CheckAttack ();
                     break;
                 case State.Rolling:
@@ -126,7 +131,7 @@ namespace RPG.Control {
         }
 
         private void Roll () {
-            if (Input.GetButtonDown ("Jump")) {
+            if (Input.GetMouseButtonDown (1)) {
                 currentSpeed = Mathf.Max (rollSpeed, currentSpeed);
                 animator.SetTrigger ("roll");
                 state = State.Rolling;
@@ -187,8 +192,7 @@ namespace RPG.Control {
             timeSinceLastAttack += Time.deltaTime;
             if (Input.GetMouseButtonDown (0) && timeSinceLastAttack > attackCooldown) {
                 animator.SetTrigger ("attack");
-                animator.SetFloat ("attackMotion", Random.Range (0, 4));
-                print ("Attacking");
+                animator.SetFloat ("attackMotion", UnityEngine.Random.Range (0, 4));
                 state = State.Attacking;
                 timeSinceLastAttack = 0f;
                 return;
@@ -205,13 +209,22 @@ namespace RPG.Control {
             timeAttacking += Time.deltaTime;
         }
 
+        private void Jump () {
+            if (Input.GetButtonDown ("Jump")) {
+                animator.SetTrigger ("jump");
+                float jumpVelocity = (float) Math.Sqrt (-2 * gravity * jumpHeight);
+                velocityY = jumpVelocity;
+            }
+        }
+
         private void ToggleIdleAnimation () {
             timeSinceLastIdleAnimation += Time.deltaTime;
 
-            if (timeSinceLastIdleAnimation >= randomIdleInterval) {
-                animator.SetFloat ("idleMotion", Random.Range (0, idleAnimations));
+            if (timeSinceLastInput >= randomIdleInterval && timeSinceLastIdleAnimation >= randomIdleInterval) {
+                animator.SetFloat ("idleMotion", UnityEngine.Random.Range (0, idleAnimationsCount));
                 animator.SetTrigger ("idle");
-                randomIdleInterval = Random.Range (5, 26f);
+
+                randomIdleInterval = UnityEngine.Random.Range (8f, 16f);
                 timeSinceLastIdleAnimation = 0;
             }
         }
