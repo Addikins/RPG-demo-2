@@ -44,7 +44,6 @@ namespace RPG.Control {
         private float timeOffGround;
         private float timeAttacking;
         private float timeSinceLastAttack;
-        private UnityEngine.Random random;
 
         float turnSmoothVelocity;
         float speedSmoothVelocity;
@@ -52,8 +51,8 @@ namespace RPG.Control {
         Transform cameraT;
         Animator animator;
         CharacterController controller;
-        private float randomIdleInterval;
         private float timeSinceLastInput;
+        private float idleInterval = 5f;
 
         void Start () {
             state = State.Normal;
@@ -66,7 +65,6 @@ namespace RPG.Control {
 
             // distanceToGround = GetComponent<SphereCollider> ().bounds.extents.y;
             controller = GetComponent<CharacterController> ();
-            randomIdleInterval = UnityEngine.Random.Range (5, 26f);
 
         }
 
@@ -220,13 +218,14 @@ namespace RPG.Control {
         private void ToggleIdleAnimation () {
             timeSinceLastIdleAnimation += Time.deltaTime;
 
-            if (timeSinceLastInput >= randomIdleInterval && timeSinceLastIdleAnimation >= randomIdleInterval) {
-                animator.SetFloat ("idleMotion", UnityEngine.Random.Range (0, idleAnimationsCount));
+            if (timeSinceLastInput >= idleInterval && timeSinceLastIdleAnimation >= idleInterval) {
                 animator.SetTrigger ("idle");
-
-                randomIdleInterval = UnityEngine.Random.Range (8f, 16f);
                 timeSinceLastIdleAnimation = 0;
             }
+        }
+
+        public void SetIdleInterveral (float interval) {
+            idleInterval = interval;
         }
     }
 }
